@@ -650,7 +650,7 @@
 
   async function registarPedido(cliente, itens, subtotal, desconto, total, cupao) {
     try {
-      await db.from('pedidos').insert({
+      const { data, error } = await db.from('pedidos').insert({
         cliente_nome: cliente.nome,
         cliente_telefone: cliente.telefone,
         cliente_localizacao: cliente.localizacao,
@@ -662,25 +662,37 @@
         cupao_usado: cupao || null
       });
 
+      if (error) {
+        console.error('ERRO ao inserir pedido:', error.message, error.details);
+        return;
+      }
+
+      console.log('✅ Pedido registado com sucesso!');
+
       // Actualizar estatísticas de venda por produto
       for (const item of itens) {
-        const { data } = await db
+        const { data: est, error: errEst } = await db
           .from('estatisticas_produtos')
           .select('total_vendas, total_unidades_vendidas')
           .eq('produto_id', item.id)
           .single();
 
-        if (data) {
-          await db.from('estatisticas_produtos')
-            .update({
-              total_vendas: (data.total_vendas || 0) + 1,
-              total_unidades_vendidas: (data.total_unidades_vendidas || 0) + item.qtd,
-              atualizado_em: new Date().toISOString()
-            })
-            .eq('produto_id', item.id);
-        }
+        if (errEst) { console.error('ERRO ao ler estatísticas:', errEst.message); continue; }
+
+        const { error: errUp } = await db.from('estatisticas_produtos')
+          .update({
+            total_vendas: (est.total_vendas || 0) + 1,
+            total_unidades_vendidas: (est.total_unidades_vendidas || 0) + item.qtd,
+            atualizado_em: new Date().toISOString()
+          })
+          .eq('produto_id', item.id);
+
+        if (errUp) console.error('ERRO ao actualizar estatísticas:', errUp.message);
+        else console.log(`✅ Estatísticas do produto ${item.nome} actualizadas`);
       }
-    } catch (e) { /* silencioso */ }
+    } catch (e) {
+      console.error('ERRO GERAL registarPedido:', e.message);
+    }
   }
 
   async function carregarBadgesAutomaticos() {
