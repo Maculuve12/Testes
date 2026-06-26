@@ -1168,25 +1168,24 @@
     if (!nomeCliente) { showToast('Por favor, introduza o seu Nome Completo.'); return; }
     if (!celularCliente) { showToast('Por favor, introduza o seu Número de Celular.'); return; }
     if (!localizacaoCliente) { showToast('Por favor, introduza a sua Localização.'); return; }
-    
-    let msg = `Olá Royalty Maculuve! 👋\n\n`;
-    msg += `👤 *DADOS DO CLIENTE*\n`;
-    msg += `• Nome: ${nomeCliente}\n`;
-    msg += `• Celular: ${celularCliente}\n`;
-    msg += `• Localização: ${localizacaoCliente}\n\n`;
-    
-    msg += `🛍️ *DETALHES DO PEDIDO*\n`;
-    carrinho.forEach((item, i) => {
-      msg += `${i+1}. ${item.nome}\n`;
-      msg += `   🎨 Cor: ${item.cor} | 📏 Tam: ${item.tamanho}\n`;
-      msg += `   🔢 Qtd: ${item.qtd}x | 💰 Preço: ${item.preco * item.qtd} MT\n\n`;
-    });
 
     const totalPecas = carrinho.reduce((acc, item) => acc + item.qtd, 0);
     const subtotal = carrinho.reduce((acc, item) => acc + (item.preco * item.qtd), 0);
     const desconto = cupaoAplicado ? totalPecas * 50 : 0;
     const total = subtotal - desconto;
 
+    // ── Montar mensagem WhatsApp ──
+    let msg = `Olá Royalty Maculuve! 👋\n\n`;
+    msg += `👤 *DADOS DO CLIENTE*\n`;
+    msg += `• Nome: ${nomeCliente}\n`;
+    msg += `• Celular: ${celularCliente}\n`;
+    msg += `• Localização: ${localizacaoCliente}\n\n`;
+    msg += `🛍️ *DETALHES DO PEDIDO*\n`;
+    carrinho.forEach((item, i) => {
+      msg += `${i+1}. ${item.nome}\n`;
+      msg += `   🎨 Cor: ${item.cor} | 📏 Tam: ${item.tamanho}\n`;
+      msg += `   🔢 Qtd: ${item.qtd}x | 💰 Preço: ${item.preco * item.qtd} MT\n\n`;
+    });
     msg += `─────────────────────\n`;
     msg += `💳 *Subtotal:* ${subtotal} MT\n`;
     if (cupaoAplicado) {
@@ -1195,31 +1194,22 @@
     } else {
       msg += `✅ *Total:* ${total} MT\n`;
     }
+    if (notas) msg += `\n📝 *Preferências de Entrega:* "${notas}"\n`;
 
-    if (notas) {
-      msg += `\n📝 *Preferências de Entrega:* "${notas}"\n`;
-    }
+    // ── WHATSAPP — abre PRIMEIRO, directamente pelo clique ──
+    const waUrl = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`;
+    window.location.href = waUrl;
 
-    // Abre o WhatsApp IMEDIATAMENTE
-    window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
-
-    // Pixel em segundo plano
-    fbq('track', 'Purchase', {
-      content_ids: carrinho.map(item => String(item.id)),
-      content_type: 'product',
-      num_items: totalPecas,
-      value: total,
-      currency: 'MZN'
-    });
-
-    // Supabase em segundo plano — não bloqueia o WhatsApp
-    const itensPedido = carrinho.map(i => ({ id: i.id, nome: i.nome, cor: i.cor, tamanho: i.tamanho, qtd: i.qtd, preco: i.preco }));
-    registarPedido(
-      { nome: nomeCliente, telefone: celularCliente, localizacao: localizacaoCliente, notas },
-      itensPedido,
-      subtotal, desconto, total,
-      cupaoAplicado ? 'RM07' : null
-    );
+    // ── Pixel e Supabase — em segundo plano ──
+    setTimeout(() => {
+      try { fbq('track', 'Purchase', { content_ids: carrinho.map(i => String(i.id)), content_type: 'product', num_items: totalPecas, value: total, currency: 'MZN' }); } catch(e) {}
+      registarPedido(
+        { nome: nomeCliente, telefone: celularCliente, localizacao: localizacaoCliente, notas },
+        carrinho.map(i => ({ id: i.id, nome: i.nome, cor: i.cor, tamanho: i.tamanho, qtd: i.qtd, preco: i.preco })),
+        subtotal, desconto, total,
+        cupaoAplicado ? 'RM07' : null
+      );
+    }, 500);
   }
 
   function showPage(page, el) {
