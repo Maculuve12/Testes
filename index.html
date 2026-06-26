@@ -590,122 +590,136 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<div class="toast" id="toast"></div>
-
 <script>
   // ════════════════════════════════════════
   // [SUPABASE — BANCO DE DADOS]
   // → SUPABASE_URL : URL do projeto Supabase
-  // → SUPABASE_KEY : Chave publicável (anon public)
+  // → SUPABASE_KEY : Chave publicável
   // ════════════════════════════════════════
-const SUPABASE_URL = 'https://lmqtqyepukrhkpnfzzdk.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_hQhrE_SDDuRM07SYilnJ5w_77eptvcj';
-  const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const SUPABASE_URL = 'https://zrcnwkrvfkykqnhwoklh.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_PX2HcOTmRmbHLDOT5YuKjg_KBNB6aZc';
 
-  // ════════════════════════════════════════
-  // [WHATSAPP] — Número de contacto da loja
-  // → Substitui pelo novo número com código do país
-  // ════════════════════════════════════════
-  const WA_NUMBER = '258879573018';
+  // Função base para chamar a REST API do Supabase directamente
+  async function sbInsert(tabela, dados) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${tabela}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(dados)
+      });
+      if (!res.ok) {
+        const err = await res.text();
+        console.error(`ERRO ao inserir em ${tabela}:`, err);
+      }
+    } catch (e) {
+      console.error(`ERRO fetch ${tabela}:`, e.message);
+    }
+  }
+
+  async function sbSelect(tabela, filtro = '') {
+    try {
+      const sep = filtro ? '&' : '';
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${tabela}?${filtro}${sep}select=*`, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Accept': 'application/json'
+        }
+      });
+      if (!res.ok) {
+        const err = await res.text();
+        console.error(`ERRO select ${tabela}:`, err);
+        return null;
+      }
+      return await res.json();
+    } catch (e) {
+      console.error(`ERRO fetch select ${tabela}:`, e.message);
+      return null;
+    }
+  }
+
+  async function sbUpdate(tabela, filtro, dados) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${tabela}?${filtro}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(dados)
+      });
+      if (!res.ok) {
+        const err = await res.text();
+        console.error(`ERRO ao actualizar ${tabela}:`, err);
+      }
+    } catch (e) {
+      console.error(`ERRO fetch update ${tabela}:`, e.message);
+    }
+  }
 
   // ════════════════════════════════════════
   // [SUPABASE — FUNÇÕES DE REGISTO]
-  // Estas funções enviam dados para o banco
-  // de dados automaticamente
   // ════════════════════════════════════════
 
   async function registarEvento(tipo, produto, extras = {}) {
-    try {
-      await db.from('eventos').insert({
-        tipo,
-        produto_id: produto?.id || null,
-        produto_nome: produto?.nome || null,
-        cor: extras.cor || null,
-        tamanho: extras.tamanho || null,
-        quantidade: extras.quantidade || 1,
-        preco: produto?.preco || null
-      });
-    } catch (e) { /* silencioso para não afectar a loja */ }
+    await sbInsert('eventos', {
+      tipo,
+      produto_id: produto?.id || null,
+      produto_nome: produto?.nome || null,
+      cor: extras.cor || null,
+      tamanho: extras.tamanho || null,
+      quantidade: extras.quantidade || 1,
+      preco: produto?.preco || null
+    });
   }
 
   async function atualizarEstatisticas(produtoId, campo) {
-    try {
-      const { data } = await db
-        .from('estatisticas_produtos')
-        .select(campo)
-        .eq('produto_id', produtoId)
-        .single();
-      if (data) {
-        await db.from('estatisticas_produtos')
-          .update({ 
-            [campo]: (data[campo] || 0) + 1,
-            atualizado_em: new Date().toISOString()
-          })
-          .eq('produto_id', produtoId);
-      }
-    } catch (e) { /* silencioso */ }
+    const data = await sbSelect('estatisticas_produtos', `produto_id=eq.${produtoId}&select=${campo}`);
+    if (data && data[0]) {
+      await sbUpdate('estatisticas_produtos', `produto_id=eq.${produtoId}`, {
+        [campo]: (data[0][campo] || 0) + 1,
+        atualizado_em: new Date().toISOString()
+      });
+    }
   }
 
   async function registarPedido(cliente, itens, subtotal, desconto, total, cupao) {
-    try {
-      const { data, error } = await db.from('pedidos').insert({
-        cliente_nome: cliente.nome,
-        cliente_telefone: cliente.telefone,
-        cliente_localizacao: cliente.localizacao,
-        notas: cliente.notas,
-        itens: itens,
-        subtotal,
-        desconto,
-        total,
-        cupao_usado: cupao || null
-      });
+    await sbInsert('pedidos', {
+      cliente_nome: cliente.nome,
+      cliente_telefone: cliente.telefone,
+      cliente_localizacao: cliente.localizacao,
+      notas: cliente.notas,
+      itens: itens,
+      subtotal,
+      desconto,
+      total,
+      cupao_usado: cupao || null
+    });
 
-      if (error) {
-        console.error('ERRO ao inserir pedido:', error.message, error.details);
-        return;
+    for (const item of itens) {
+      const data = await sbSelect('estatisticas_produtos', `produto_id=eq.${item.id}&select=total_vendas,total_unidades_vendidas`);
+      if (data && data[0]) {
+        await sbUpdate('estatisticas_produtos', `produto_id=eq.${item.id}`, {
+          total_vendas: (data[0].total_vendas || 0) + 1,
+          total_unidades_vendidas: (data[0].total_unidades_vendidas || 0) + item.qtd,
+          atualizado_em: new Date().toISOString()
+        });
       }
-
-      console.log('✅ Pedido registado com sucesso!');
-
-      // Actualizar estatísticas de venda por produto
-      for (const item of itens) {
-        const { data: est, error: errEst } = await db
-          .from('estatisticas_produtos')
-          .select('total_vendas, total_unidades_vendidas')
-          .eq('produto_id', item.id)
-          .single();
-
-        if (errEst) { console.error('ERRO ao ler estatísticas:', errEst.message); continue; }
-
-        const { error: errUp } = await db.from('estatisticas_produtos')
-          .update({
-            total_vendas: (est.total_vendas || 0) + 1,
-            total_unidades_vendidas: (est.total_unidades_vendidas || 0) + item.qtd,
-            atualizado_em: new Date().toISOString()
-          })
-          .eq('produto_id', item.id);
-
-        if (errUp) console.error('ERRO ao actualizar estatísticas:', errUp.message);
-        else console.log(`✅ Estatísticas do produto ${item.nome} actualizadas`);
-      }
-    } catch (e) {
-      console.error('ERRO GERAL registarPedido:', e.message);
     }
   }
 
   async function carregarBadgesAutomaticos() {
-    try {
-      const { data } = await db
-        .from('estatisticas_produtos')
-        .select('produto_id, total_vendas')
-        .order('total_vendas', { ascending: false })
-        .limit(1);
-      if (data && data.length > 0 && data[0].total_vendas > 0) {
-        window.maisCampradoId = data[0].produto_id;
-      }
-    } catch (e) { /* silencioso */ }
+    const data = await sbSelect('estatisticas_produtos', 'select=produto_id,total_vendas&order=total_vendas.desc&limit=1');
+    if (data && data.length > 0 && data[0].total_vendas > 0) {
+      window.maisCampradoId = data[0].produto_id;
+    }
   }
 
   // ════════════════════════════════════════
