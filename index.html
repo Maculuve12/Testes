@@ -661,14 +661,24 @@
         total,
         cupao_usado: cupao || null
       });
+
       // Actualizar estatísticas de venda por produto
       for (const item of itens) {
-        await atualizarEstatisticas(item.id, 'total_vendas');
-        await db.from('estatisticas_produtos')
-          .update({ 
-            total_unidades_vendidas: db.rpc('increment', { row_id: item.id, amount: item.qtd })
-          })
-          .eq('produto_id', item.id);
+        const { data } = await db
+          .from('estatisticas_produtos')
+          .select('total_vendas, total_unidades_vendidas')
+          .eq('produto_id', item.id)
+          .single();
+
+        if (data) {
+          await db.from('estatisticas_produtos')
+            .update({
+              total_vendas: (data.total_vendas || 0) + 1,
+              total_unidades_vendidas: (data.total_unidades_vendidas || 0) + item.qtd,
+              atualizado_em: new Date().toISOString()
+            })
+            .eq('produto_id', item.id);
+        }
       }
     } catch (e) { /* silencioso */ }
   }
