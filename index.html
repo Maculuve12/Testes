@@ -1203,7 +1203,7 @@
     // Abre o WhatsApp IMEDIATAMENTE
     window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
 
-    // Pixel e Supabase em segundo plano (não bloqueiam o WhatsApp)
+    // Pixel em segundo plano
     fbq('track', 'Purchase', {
       content_ids: carrinho.map(item => String(item.id)),
       content_type: 'product',
@@ -1212,9 +1212,11 @@
       currency: 'MZN'
     });
 
+    // Supabase em segundo plano — não bloqueia o WhatsApp
+    const itensPedido = carrinho.map(i => ({ id: i.id, nome: i.nome, cor: i.cor, tamanho: i.tamanho, qtd: i.qtd, preco: i.preco }));
     registarPedido(
-      { nome, telefone, localizacao, notas },
-      carrinho.map(i => ({ id: i.id, nome: i.nome, cor: i.cor, tamanho: i.tamanho, qtd: i.qtd, preco: i.preco })),
+      { nome: nomeCliente, telefone: celularCliente, localizacao: localizacaoCliente, notas },
+      itensPedido,
       subtotal, desconto, total,
       cupaoAplicado ? 'RM07' : null
     );
