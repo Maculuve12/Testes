@@ -1164,7 +1164,10 @@
       msg += `\n📝 *Preferências de Entrega:* "${notas}"\n`;
     }
 
-    // Pixel: Purchase
+    // Abre o WhatsApp IMEDIATAMENTE
+    window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+
+    // Pixel e Supabase em segundo plano (não bloqueiam o WhatsApp)
     fbq('track', 'Purchase', {
       content_ids: carrinho.map(item => String(item.id)),
       content_type: 'product',
@@ -1173,15 +1176,12 @@
       currency: 'MZN'
     });
 
-    // Supabase: registar pedido completo
     registarPedido(
       { nome, telefone, localizacao, notas },
       carrinho.map(i => ({ id: i.id, nome: i.nome, cor: i.cor, tamanho: i.tamanho, qtd: i.qtd, preco: i.preco })),
       subtotal, desconto, total,
       cupaoAplicado ? 'RM07' : null
     );
-
-    window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
   function showPage(page, el) {
