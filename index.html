@@ -300,7 +300,6 @@
     }
     .badge-novo { background: var(--g2); color: #fff; }
     .badge-promo { background: var(--gold); color: var(--g1); }
-    .badge-mais-vendido { background: #c0392b; color: #fff; }
 
     /* PREÇO RISCADO */
     .card-price-wrap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -590,137 +589,14 @@
   </div>
 </div>
 
+<div class="toast" id="toast"></div>
+
 <script>
   // ════════════════════════════════════════
-  // [SUPABASE — BANCO DE DADOS]
-  // → SUPABASE_URL : URL do projeto Supabase
-  // → SUPABASE_KEY : Chave publicável
+  // [WHATSAPP] — Número de contacto da loja
+  // → Substitui pelo novo número com código do país
   // ════════════════════════════════════════
-  const SUPABASE_URL = 'https://zrcnwkrvfkykqnhwoklh.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_PX2HcOTmRmbHLDOT5YuKjg_KBNB6aZc';
-
-  // Função base para chamar a REST API do Supabase directamente
-  async function sbInsert(tabela, dados) {
-    try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/${tabela}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify(dados)
-      });
-      if (!res.ok) {
-        const err = await res.text();
-        console.error(`ERRO ao inserir em ${tabela}:`, err);
-      }
-    } catch (e) {
-      console.error(`ERRO fetch ${tabela}:`, e.message);
-    }
-  }
-
-  async function sbSelect(tabela, filtro = '') {
-    try {
-      const sep = filtro ? '&' : '';
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/${tabela}?${filtro}${sep}select=*`, {
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Accept': 'application/json'
-        }
-      });
-      if (!res.ok) {
-        const err = await res.text();
-        console.error(`ERRO select ${tabela}:`, err);
-        return null;
-      }
-      return await res.json();
-    } catch (e) {
-      console.error(`ERRO fetch select ${tabela}:`, e.message);
-      return null;
-    }
-  }
-
-  async function sbUpdate(tabela, filtro, dados) {
-    try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/${tabela}?${filtro}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify(dados)
-      });
-      if (!res.ok) {
-        const err = await res.text();
-        console.error(`ERRO ao actualizar ${tabela}:`, err);
-      }
-    } catch (e) {
-      console.error(`ERRO fetch update ${tabela}:`, e.message);
-    }
-  }
-
-  // ════════════════════════════════════════
-  // [SUPABASE — FUNÇÕES DE REGISTO]
-  // ════════════════════════════════════════
-
-  async function registarEvento(tipo, produto, extras = {}) {
-    await sbInsert('eventos', {
-      tipo,
-      produto_id: produto?.id || null,
-      produto_nome: produto?.nome || null,
-      cor: extras.cor || null,
-      tamanho: extras.tamanho || null,
-      quantidade: extras.quantidade || 1,
-      preco: produto?.preco || null
-    });
-  }
-
-  async function atualizarEstatisticas(produtoId, campo) {
-    const data = await sbSelect('estatisticas_produtos', `produto_id=eq.${produtoId}&select=${campo}`);
-    if (data && data[0]) {
-      await sbUpdate('estatisticas_produtos', `produto_id=eq.${produtoId}`, {
-        [campo]: (data[0][campo] || 0) + 1,
-        atualizado_em: new Date().toISOString()
-      });
-    }
-  }
-
-  async function registarPedido(cliente, itens, subtotal, desconto, total, cupao) {
-    await sbInsert('pedidos', {
-      cliente_nome: cliente.nome,
-      cliente_telefone: cliente.telefone,
-      cliente_localizacao: cliente.localizacao,
-      notas: cliente.notas,
-      itens: itens,
-      subtotal,
-      desconto,
-      total,
-      cupao_usado: cupao || null
-    });
-
-    for (const item of itens) {
-      const data = await sbSelect('estatisticas_produtos', `produto_id=eq.${item.id}&select=total_vendas,total_unidades_vendidas`);
-      if (data && data[0]) {
-        await sbUpdate('estatisticas_produtos', `produto_id=eq.${item.id}`, {
-          total_vendas: (data[0].total_vendas || 0) + 1,
-          total_unidades_vendidas: (data[0].total_unidades_vendidas || 0) + item.qtd,
-          atualizado_em: new Date().toISOString()
-        });
-      }
-    }
-  }
-
-  async function carregarBadgesAutomaticos() {
-    const data = await sbSelect('estatisticas_produtos', 'select=produto_id,total_vendas&order=total_vendas.desc&limit=1');
-    if (data && data.length > 0 && data[0].total_vendas > 0) {
-      window.maisCampradoId = data[0].produto_id;
-    }
-  }
+  const WA_NUMBER = '258879573018';
 
   // ════════════════════════════════════════
   // [PRODUTOS] — Lista de todos os produtos da loja
@@ -756,7 +632,7 @@
       badge: 'Novo',
       cores: [
         { nome: 'Verde Escuro', hex: '#1e3322' }, 
-        { nome: 'Castanha', hex: '#59402f' }, 
+        { nome: 'Creme', hex: '#fdf6e2' },
         { nome: 'Branca', hex: '#ffffff' }
       ],
       tamanhos: ['M', 'L', 'XL'],
@@ -857,15 +733,9 @@
       return `
       <div class="card">
         <div class="prod-galeria" id="galeria-${p.id}">
-          ${(p.badge || p.precoOriginal || window.maisCampradoId === p.id) ? `
-            <div class="prod-badge ${
-              p.badge === 'Novo' ? 'badge-novo' : 
-              window.maisCampradoId === p.id ? 'badge-mais-vendido' :
-              p.precoOriginal ? 'badge-promo' : ''
-            }">
-              ${p.badge === 'Novo' ? 'Novo' : 
-                window.maisCampradoId === p.id ? '🔥 Mais Comprado' :
-                p.precoOriginal ? `-${Math.round((1 - p.preco / p.precoOriginal) * 100)}%` : ''}
+          ${p.badge || p.precoOriginal ? `
+            <div class="prod-badge ${p.badge === 'Novo' ? 'badge-novo' : p.precoOriginal ? 'badge-promo' : ''}">
+              ${p.badge === 'Novo' ? 'Novo' : p.precoOriginal ? `-${Math.round((1 - p.preco / p.precoOriginal) * 100)}%` : ''}
             </div>
           ` : ''}
           <div class="prod-track" id="track-${p.id}">
@@ -1008,7 +878,7 @@
     atualizarCarrinhoVisual();
     showToast(`${p.nome} adicionado.`);
 
-    // Pixel: AddToCart
+    // Pixel: AddToCart — produto efectivamente adicionado
     fbq('track', 'AddToCart', {
       content_name: p.nome,
       content_ids: [String(p.id)],
@@ -1017,10 +887,9 @@
       currency: 'MZN'
     });
 
-    // Supabase: registar AddToCart
-    registarEvento('adicionar_carrinho', p, { cor, tamanho });
-    atualizarEstatisticas(p.id, 'total_carrinho');
-
+    // Supabase: registar carrinho
+    sbCarrinho(p, cor, tamanho);
+    
     setTimeout(() => toggleCart(true), 300);
   }
 
@@ -1140,7 +1009,7 @@
     btnPagar.style.display = 'none';
     formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-    // Pixel: InitiateCheckout
+    // Pixel: InitiateCheckout — cliente clicou em Pagar
     const subtotal = carrinho.reduce((acc, item) => acc + (item.preco * item.qtd), 0);
     fbq('track', 'InitiateCheckout', {
       content_ids: carrinho.map(item => String(item.id)),
@@ -1149,9 +1018,6 @@
       value: subtotal,
       currency: 'MZN'
     });
-
-    // Supabase: registar início de pagamento
-    registarEvento('iniciar_pagamento', null, { quantidade: carrinho.reduce((a,i) => a + i.qtd, 0) });
   }
 
   function checkoutCart() {
@@ -1168,24 +1034,25 @@
     if (!nomeCliente) { showToast('Por favor, introduza o seu Nome Completo.'); return; }
     if (!celularCliente) { showToast('Por favor, introduza o seu Número de Celular.'); return; }
     if (!localizacaoCliente) { showToast('Por favor, introduza a sua Localização.'); return; }
-
-    const totalPecas = carrinho.reduce((acc, item) => acc + item.qtd, 0);
-    const subtotal = carrinho.reduce((acc, item) => acc + (item.preco * item.qtd), 0);
-    const desconto = cupaoAplicado ? totalPecas * 50 : 0;
-    const total = subtotal - desconto;
-
-    // ── Montar mensagem WhatsApp ──
+    
     let msg = `Olá Royalty Maculuve! 👋\n\n`;
     msg += `👤 *DADOS DO CLIENTE*\n`;
     msg += `• Nome: ${nomeCliente}\n`;
     msg += `• Celular: ${celularCliente}\n`;
     msg += `• Localização: ${localizacaoCliente}\n\n`;
+    
     msg += `🛍️ *DETALHES DO PEDIDO*\n`;
     carrinho.forEach((item, i) => {
       msg += `${i+1}. ${item.nome}\n`;
       msg += `   🎨 Cor: ${item.cor} | 📏 Tam: ${item.tamanho}\n`;
       msg += `   🔢 Qtd: ${item.qtd}x | 💰 Preço: ${item.preco * item.qtd} MT\n\n`;
     });
+
+    const totalPecas = carrinho.reduce((acc, item) => acc + item.qtd, 0);
+    const subtotal = carrinho.reduce((acc, item) => acc + (item.preco * item.qtd), 0);
+    const desconto = cupaoAplicado ? totalPecas * 50 : 0;
+    const total = subtotal - desconto;
+
     msg += `─────────────────────\n`;
     msg += `💳 *Subtotal:* ${subtotal} MT\n`;
     if (cupaoAplicado) {
@@ -1194,22 +1061,29 @@
     } else {
       msg += `✅ *Total:* ${total} MT\n`;
     }
-    if (notas) msg += `\n📝 *Preferências de Entrega:* "${notas}"\n`;
 
-    // ── WHATSAPP — abre PRIMEIRO, directamente pelo clique ──
-    const waUrl = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`;
-    window.location.href = waUrl;
+    if (notas) {
+      msg += `\n📝 *Preferências de Entrega:* "${notas}"\n`;
+    }
 
-    // ── Pixel e Supabase — em segundo plano ──
-    setTimeout(() => {
-      try { fbq('track', 'Purchase', { content_ids: carrinho.map(i => String(i.id)), content_type: 'product', num_items: totalPecas, value: total, currency: 'MZN' }); } catch(e) {}
-      registarPedido(
-        { nome: nomeCliente, telefone: celularCliente, localizacao: localizacaoCliente, notas },
-        carrinho.map(i => ({ id: i.id, nome: i.nome, cor: i.cor, tamanho: i.tamanho, qtd: i.qtd, preco: i.preco })),
-        subtotal, desconto, total,
-        cupaoAplicado ? 'RM07' : null
-      );
-    }, 500);
+    // Pixel: Purchase — valor final com desconto
+    fbq('track', 'Purchase', {
+      content_ids: carrinho.map(item => String(item.id)),
+      content_type: 'product',
+      num_items: totalPecas,
+      value: total,
+      currency: 'MZN'
+    });
+
+    window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+
+    // Supabase: guardar pedido
+    sbGuardarPedido(
+      { nome: nomeCliente, telefone: celularCliente, localizacao: localizacaoCliente, notas: notas },
+      carrinho.map(function(i) { return { id: i.id, nome: i.nome, cor: i.cor, tamanho: i.tamanho, qtd: i.qtd, preco: i.preco }; }),
+      subtotal, desconto, total,
+      cupaoAplicado ? 'RM07' : null
+    );
   }
 
   function showPage(page, el) {
@@ -1227,8 +1101,52 @@
     setTimeout(() => t.classList.remove('show'), 2800);
   }
 
-  // Inicializar loja — carrega badges automáticos do Supabase antes de renderizar
-  carregarBadgesAutomaticos().then(() => renderProdutos());
+  // ════════════════════════════════════════
+  // [SUPABASE] — Banco de dados
+  // ════════════════════════════════════════
+  const SB_URL = 'https://zrcnwkrvfkykqnhwoklh.supabase.co';
+  const SB_KEY = 'sb_publishable_PX2HcOTmRmbHLDOT5YuKjg_KBNB6aZc';
+
+  function sbPost(tabela, dados) {
+    fetch(`${SB_URL}/rest/v1/${tabela}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SB_KEY,
+        'Authorization': 'Bearer ' + SB_KEY,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(dados)
+    }).catch(function(){});
+  }
+
+  function sbGuardarPedido(cliente, itens, subtotal, desconto, total, cupao) {
+    sbPost('pedidos', {
+      cliente_nome: cliente.nome,
+      cliente_telefone: cliente.telefone,
+      cliente_localizacao: cliente.localizacao,
+      notas: cliente.notas || '',
+      itens: itens,
+      subtotal: subtotal,
+      desconto: desconto,
+      total: total,
+      cupao_usado: cupao || null
+    });
+  }
+
+  function sbCarrinho(produto, cor, tamanho) {
+    sbPost('eventos', {
+      tipo: 'adicionar_carrinho',
+      produto_id: produto.id,
+      produto_nome: produto.nome,
+      cor: cor,
+      tamanho: tamanho,
+      quantidade: 1,
+      preco: produto.preco
+    });
+  }
+
+  renderProdutos();
   atualizarCarrinhoVisual();
 </script>
 </body>
