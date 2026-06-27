@@ -300,6 +300,7 @@
     }
     .badge-novo { background: var(--g2); color: #fff; }
     .badge-promo { background: var(--gold); color: var(--g1); }
+    .badge-mais-vendido { background: #c0392b; color: #fff; }
 
     /* PREÇO RISCADO */
     .card-price-wrap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -733,9 +734,15 @@
       return `
       <div class="card">
         <div class="prod-galeria" id="galeria-${p.id}">
-          ${p.badge || p.precoOriginal ? `
-            <div class="prod-badge ${p.badge === 'Novo' ? 'badge-novo' : p.precoOriginal ? 'badge-promo' : ''}">
-              ${p.badge === 'Novo' ? 'Novo' : p.precoOriginal ? `-${Math.round((1 - p.preco / p.precoOriginal) * 100)}%` : ''}
+          ${(p.badge || p.precoOriginal || maisCampradoId === p.id) ? `
+            <div class="prod-badge ${
+              maisCampradoId === p.id ? 'badge-mais-vendido' :
+              p.badge === 'Novo' ? 'badge-novo' :
+              p.precoOriginal ? 'badge-promo' : ''
+            }">
+              ${maisCampradoId === p.id ? '🔥 Mais Vendido' :
+                p.badge === 'Novo' ? 'Novo' :
+                p.precoOriginal ? `-${Math.round((1 - p.preco / p.precoOriginal) * 100)}%` : ''}
             </div>
           ` : ''}
           <div class="prod-track" id="track-${p.id}">
@@ -1146,7 +1153,31 @@
     });
   }
 
+  // ════════════════════════════════════════
+  // [BADGE MAIS VENDIDO] — Carrega do Supabase
+  // e aplica automaticamente no produto
+  // com mais vendas
+  // ════════════════════════════════════════
+  let maisCampradoId = null;
+
+  function carregarMaisVendido() {
+    fetch(`${SB_URL}/rest/v1/estatisticas_produtos?order=total_vendas.desc&limit=1&select=produto_id,total_vendas`, {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data && data.length > 0 && data[0].total_vendas > 0) {
+        maisCampradoId = data[0].produto_id;
+      }
+      renderProdutos();
+    })
+    .catch(function() {
+      renderProdutos();
+    });
+  }
+
   renderProdutos();
+  carregarMaisVendido();
   atualizarCarrinhoVisual();
 </script>
 </body>
