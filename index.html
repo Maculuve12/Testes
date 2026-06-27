@@ -600,131 +600,81 @@
   const WA_NUMBER = '258879573018';
 
   // ════════════════════════════════════════
-  // [PRODUTOS] — Lista de todos os produtos da loja
-  // Para adicionar um produto novo: copia um bloco
-  // completo { id:... } e cola antes do ]; final,
-  // mudando o id para o próximo número disponível.
-  // Para remover: apaga o bloco inteiro { ... },
+  // [SUPABASE] — Banco de dados
   // ════════════════════════════════════════
-  const produtos = [
+  const SB_URL = 'https://zrcnwkrvfkykqnhwoklh.supabase.co';
+  const SB_KEY = 'sb_publishable_PX2HcOTmRmbHLDOT5YuKjg_KBNB6aZc';
 
-    // ────────────────────────────────────────
-    // [PRODUTO 1] — Camiseta RAM 30
-    // → nome        : Nome exibido na loja
-    // → desc        : Descrição do produto
-    // → preco       : Preço promocional actual
-    // → precoOriginal: Preço riscado (remove esta
-    //                  linha se não houver desconto)
-    // → badge       : Bandeira — 'Novo' (verde)
-    //                 Remove a linha para sem bandeira
-    // → cores       : Lista de cores disponíveis
-    //                 nome = nome exibido
-    //                 hex  = código da cor
-    // → tamanhos    : Tamanhos disponíveis
-    // → imgs        : Links das fotos (carrossel
-    //                 automático com quantas quiser)
-    // ────────────────────────────────────────
-    {
-      id: 1,
-      nome: 'Camiseta RAM 30',
-      desc: 'A Camiseta RAM 30 da Royalty combina style urbano com identidade forte e minimalista. Desenvolvida para quem valoriza conforto e presença, possui um design moderno ideal para uso diário.',
-      preco: 850,
-      precoOriginal: 1000,
-      badge: 'Novo',
-      cores: [
-        { nome: 'Verde Escuro', hex: '#1e3322' }, 
-        { nome: 'Creme', hex: '#fdf6e2' },
-        { nome: 'Branca', hex: '#ffffff' }
-      ],
-      tamanhos: ['M', 'L', 'XL'],
-      imgs: [
-        'https://i.ibb.co/Cp5mPTMr/20251101-220054.jpg',
-        'https://i.ibb.co/LdthsZ55/20251101-220147.jpg',
-        'https://i.ibb.co/vCW8YVvG/20251101-215941.jpg'
-      ]
-    },
-
-    // ────────────────────────────────────────
-    // [PRODUTO 2] — Camiseta RHM 23
-    // ────────────────────────────────────────
-    {
-      id: 2,
-      nome: 'Camiseta RHM 23',
-      desc: 'A Camiseta RHM 23 traz um concept mais contemporâneo e urbano, com foco em simplicidade e impacto visual. É uma peça pensada para quem gosta de moda discreta, mas com personalidade.',
-      preco: 850,
-      precoOriginal: 1000,
-      cores: [
-        { nome: 'Branca', hex: '#ffffff' },
-        { nome: 'Verde Escuro', hex: '#1e3322' },
-        { nome: 'Azul Escuro', hex: '#1d2736' }
-      ],
-      tamanhos: ['M', 'L', 'XL'],
-      imgs: [
-        'https://i.ibb.co/4gpsrp4R/20251101-213901.jpg',
-        'https://i.ibb.co/V0JJGH67/20251101-214444.jpg',
-        'https://i.ibb.co/JRzkLB22/20251101-213826.jpg'
-      ]
-    },
-
-    // ────────────────────────────────────────
-    // [PRODUTO 3] — Camiseta RFB 12
-    // ────────────────────────────────────────
-    {
-      id: 3,
-      nome: 'Camiseta RFB 12',
-      desc: 'A Camiseta RFB 12 destaca-se pelo equilíbrio entre design clássico e style atual. É uma peça leve, confortável e resistente, ideal para transmitir autenticidade sem exageros.',
-      preco: 850,
-      precoOriginal: 1000,
-      cores: [
-        { nome: 'Creme', hex: '#fdf6e2' },
-        { nome: 'Verde Escuro', hex: '#1e3322' },
-        { nome: 'Azul Escuro', hex: '#1d2736' },
-        { nome: 'Castanho', hex: '#59402f' },
-        { nome: 'Preta', hex: '#111111' }
-      ],
-      tamanhos: ['M', 'L', 'XL'],
-      imgs: [
-        'https://i.ibb.co/gbSQpt48/20251101-215402.jpg',
-        'https://i.ibb.co/5WYQN10M/20251101-215253.jpg',
-        'https://i.ibb.co/6RVgnK7F/20251101-215223.jpg',
-        'https://i.ibb.co/FbZtmNFn/20251101-215146.jpg',
-        'https://i.ibb.co/Y7cTvzC3/20260501-095324.png'
-      ]
-    },
-
-    // ────────────────────────────────────────
-    // [PRODUTO 4] — Camiseta RPB 07
-    // ────────────────────────────────────────
-    {
-      id: 4,
-      nome: 'Camiseta RPB 07',
-      desc: 'A Camiseta RPB 07 apresenta um style mais arrojado dentro da coleção Royalty. Foi desenvolvida para quem procura destacar-se com simplicidade, elegância e uma identidade visual forte.',
-      preco: 850,
-      precoOriginal: 1000,
-      cores: [
-        { nome: 'Creme', hex: '#fdf6e2' },
-        { nome: 'Preta', hex: '#111111' },
-        { nome: 'Azul Escuro', hex: '#1d2736' },
-        { nome: 'Castanha', hex: '#59402f' },
-        { nome: 'Verde Escuro', hex: '#1e3322' }
-      ],
-      tamanhos: ['M', 'L', 'XL'],
-      imgs: [
-        'https://i.ibb.co/84Y2B3pm/20251101-221006.jpg',
-        'https://i.ibb.co/zTySYqKL/20251101-220915.jpg',
-        'https://i.ibb.co/99ZYpkVL/20251101-220822.jpg',
-        'https://i.ibb.co/ZpJ02Xpc/20251101-220750.jpg',
-        'https://i.ibb.co/PzVn0sK5/20251101-220638.jpg'
-      ]
-    }
-  ];
-
+  let produtos = [];
+  let maisCampradoId = null;
   const estados = {};
-  produtos.forEach(p => { 
-    estados[p.id] = { cor: null, tamanho: null, slideIdx: 0 }; 
-  });
-
   let carrinho = [];
+
+  function iniciarEstados() {
+    produtos.forEach(p => {
+      if (!estados[p.id]) estados[p.id] = { cor: null, tamanho: null, slideIdx: 0 };
+    });
+  }
+
+  // Funções Supabase
+  function sbPost(tabela, dados) {
+    fetch(`${SB_URL}/rest/v1/${tabela}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Prefer': 'return=minimal' },
+      body: JSON.stringify(dados)
+    }).catch(function(){});
+  }
+
+  function sbGuardarPedido(cliente, itens, subtotal, desconto, total, cupao) {
+    sbPost('pedidos', {
+      cliente_nome: cliente.nome, cliente_telefone: cliente.telefone,
+      cliente_localizacao: cliente.localizacao, notas: cliente.notas || '',
+      itens: itens, subtotal: subtotal, desconto: desconto,
+      total: total, cupao_usado: cupao || null
+    });
+  }
+
+  function sbCarrinho(produto, cor, tamanho) {
+    sbPost('eventos', {
+      tipo: 'adicionar_carrinho', produto_id: produto.id,
+      produto_nome: produto.nome, cor: cor, tamanho: tamanho,
+      quantidade: 1, preco: produto.preco
+    });
+  }
+
+  function carregarMaisVendido() {
+    fetch(`${SB_URL}/rest/v1/estatisticas_produtos?order=total_vendas.desc&limit=1&select=produto_id,total_vendas`, {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data && data.length > 0 && data[0].total_vendas > 0) {
+        maisCampradoId = data[0].produto_id;
+      }
+      renderProdutos();
+    })
+    .catch(function() { renderProdutos(); });
+  }
+
+  // Carregar produtos do Supabase ao iniciar
+  fetch(`${SB_URL}/rest/v1/produtos?activo=eq.true&order=ordem.asc&select=*`, {
+    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    produtos = data.map(function(p) {
+      return {
+        id: p.id, nome: p.nome, desc: p.descricao,
+        preco: p.preco, precoOriginal: p.preco_original,
+        badge: p.badge, cores: p.cores || [],
+        tamanhos: p.tamanhos || [], imgs: p.imagens || []
+      };
+    });
+    iniciarEstados();
+    carregarMaisVendido();
+    atualizarCarrinhoVisual();
+  })
+  .catch(function() { console.error('Erro ao carregar produtos'); });
 
   function renderProdutos() {
     const grid = document.getElementById('grid-produtos');
@@ -735,14 +685,8 @@
       <div class="card">
         <div class="prod-galeria" id="galeria-${p.id}">
           ${(p.badge || p.precoOriginal || maisCampradoId === p.id) ? `
-            <div class="prod-badge ${
-              maisCampradoId === p.id ? 'badge-mais-vendido' :
-              p.badge === 'Novo' ? 'badge-novo' :
-              p.precoOriginal ? 'badge-promo' : ''
-            }">
-              ${maisCampradoId === p.id ? '🔥 Mais Vendido' :
-                p.badge === 'Novo' ? 'Novo' :
-                p.precoOriginal ? `-${Math.round((1 - p.preco / p.precoOriginal) * 100)}%` : ''}
+            <div class="prod-badge ${maisCampradoId === p.id ? 'badge-mais-vendido' : p.badge === 'Novo' ? 'badge-novo' : 'badge-promo'}">
+              ${maisCampradoId === p.id ? '🔥 Mais Vendido' : p.badge === 'Novo' ? 'Novo' : `-${Math.round((1 - p.preco / p.precoOriginal) * 100)}%`}
             </div>
           ` : ''}
           <div class="prod-track" id="track-${p.id}">
@@ -885,18 +829,15 @@
     atualizarCarrinhoVisual();
     showToast(`${p.nome} adicionado.`);
 
-    // Pixel: AddToCart — produto efectivamente adicionado
+    // Pixel: AddToCart
     fbq('track', 'AddToCart', {
-      content_name: p.nome,
-      content_ids: [String(p.id)],
-      content_type: 'product',
-      value: p.preco,
-      currency: 'MZN'
+      content_name: p.nome, content_ids: [String(p.id)],
+      content_type: 'product', value: p.preco, currency: 'MZN'
     });
 
     // Supabase: registar carrinho
     sbCarrinho(p, cor, tamanho);
-    
+
     setTimeout(() => toggleCart(true), 300);
   }
 
@@ -1088,8 +1029,7 @@
     sbGuardarPedido(
       { nome: nomeCliente, telefone: celularCliente, localizacao: localizacaoCliente, notas: notas },
       carrinho.map(function(i) { return { id: i.id, nome: i.nome, cor: i.cor, tamanho: i.tamanho, qtd: i.qtd, preco: i.preco }; }),
-      subtotal, desconto, total,
-      cupaoAplicado ? 'RM07' : null
+      subtotal, desconto, total, cupaoAplicado ? 'RM07' : null
     );
   }
 
@@ -1108,76 +1048,7 @@
     setTimeout(() => t.classList.remove('show'), 2800);
   }
 
-  // ════════════════════════════════════════
-  // [SUPABASE] — Banco de dados
-  // ════════════════════════════════════════
-  const SB_URL = 'https://zrcnwkrvfkykqnhwoklh.supabase.co';
-  const SB_KEY = 'sb_publishable_PX2HcOTmRmbHLDOT5YuKjg_KBNB6aZc';
-
-  function sbPost(tabela, dados) {
-    fetch(`${SB_URL}/rest/v1/${tabela}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SB_KEY,
-        'Authorization': 'Bearer ' + SB_KEY,
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify(dados)
-    }).catch(function(){});
-  }
-
-  function sbGuardarPedido(cliente, itens, subtotal, desconto, total, cupao) {
-    sbPost('pedidos', {
-      cliente_nome: cliente.nome,
-      cliente_telefone: cliente.telefone,
-      cliente_localizacao: cliente.localizacao,
-      notas: cliente.notas || '',
-      itens: itens,
-      subtotal: subtotal,
-      desconto: desconto,
-      total: total,
-      cupao_usado: cupao || null
-    });
-  }
-
-  function sbCarrinho(produto, cor, tamanho) {
-    sbPost('eventos', {
-      tipo: 'adicionar_carrinho',
-      produto_id: produto.id,
-      produto_nome: produto.nome,
-      cor: cor,
-      tamanho: tamanho,
-      quantidade: 1,
-      preco: produto.preco
-    });
-  }
-
-  // ════════════════════════════════════════
-  // [BADGE MAIS VENDIDO] — Carrega do Supabase
-  // e aplica automaticamente no produto
-  // com mais vendas
-  // ════════════════════════════════════════
-  let maisCampradoId = null;
-
-  function carregarMaisVendido() {
-    fetch(`${SB_URL}/rest/v1/estatisticas_produtos?order=total_vendas.desc&limit=1&select=produto_id,total_vendas`, {
-      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
-    })
-    .then(function(res) { return res.json(); })
-    .then(function(data) {
-      if (data && data.length > 0 && data[0].total_vendas > 0) {
-        maisCampradoId = data[0].produto_id;
-      }
-      renderProdutos();
-    })
-    .catch(function() {
-      renderProdutos();
-    });
-  }
-
-  renderProdutos();
-  carregarMaisVendido();
+  // Produtos e estados são inicializados após carregar do Supabase acima
   atualizarCarrinhoVisual();
 </script>
 </body>
