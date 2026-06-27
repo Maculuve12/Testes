@@ -856,31 +856,59 @@
   }
 
   // ════════════════════════════════════════
-  // [CUPÃO DE DESCONTO]
-  // → Código do cupão : 'RM07'  (linha abaixo)
-  // → Desconto por peça: 50 MT  (linha com * 50)
-  // → Nome do cupão   : 'A ROYALTY É NOSSA'
-  //   (aparece 2x abaixo — altera as duas)
+  // [CUPÃO] — Sistema dinâmico via Supabase
   // ════════════════════════════════════════
   let cupaoAplicado = false;
+  let cupaoInfo = null; // dados do cupão activo
 
   function aplicarCupao() {
     const input = document.getElementById('cupao-input');
     const msg = document.getElementById('cupao-msg');
     const codigo = input.value.trim().toUpperCase();
+    if (!codigo) return;
 
-    if (codigo === 'RM07') {
-      cupaoAplicado = true;
+    msg.className = 'cupao-msg'; msg.textContent = 'A verificar...';
+
+    fetch(`${SB_URL}/rest/v1/cupoes?codigo=eq.${codigo}&activo=eq.true&select=*`, {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (!data || data.length === 0) {
+        cupaoAplicado = false; cupaoInfo = null;
+        msg.className = 'cupao-msg err'; msg.textContent = '✗ Código inválido ou inactivo.';
+        atualizarCarrinhoVisual(); return;
+      }
+      const c = data[0];
+      // Verificar expiração
+      if (c.expira_em && new Date(c.expira_em) < new Date()) {
+        cupaoAplicado = false; cupaoInfo = null;
+        msg.className = 'cupao-msg err'; msg.textContent = '✗ Este cupão expirou.';
+        atualizarCarrinhoVisual(); return;
+      }
+      // Verificar limite de usos
+      if (c.limite_usos !== null && c.total_usos >= c.limite_usos) {
+        cupaoAplicado = false; cupaoInfo = null;
+        msg.className = 'cupao-msg err'; msg.textContent = '✗ Este cupão já atingiu o limite de utilizações.';
+        atualizarCarrinhoVisual(); return;
+      }
+      cupaoAplicado = true; cupaoInfo = c;
       input.disabled = true;
-      msg.textContent = '✓ Cupão aplicado com sucesso!';
-      msg.className = 'cupao-msg ok';
+      msg.className = 'cupao-msg ok'; msg.textContent = `✓ Cupão "${c.nome}" aplicado!`;
       atualizarCarrinhoVisual();
-    } else {
-      cupaoAplicado = false;
-      msg.textContent = '✗ Código inválido. Tente novamente.';
-      msg.className = 'cupao-msg err';
-      atualizarCarrinhoVisual();
+    })
+    .catch(function() {
+      msg.className = 'cupao-msg err'; msg.textContent = '✗ Erro ao verificar cupão.';
+    });
+  }
+
+  function calcularDesconto(subtotal, totalPecas) {
+    if (!cupaoAplicado || !cupaoInfo) return 0;
+    if (cupaoInfo.tipo === 'percentagem') {
+      return Math.round(subtotal * cupaoInfo.valor / 100);
     }
+    // fixo — por peça
+    return totalPecas * cupaoInfo.valor;
   }
 
   function atualizarCarrinhoVisual() {
@@ -934,11 +962,11 @@
 
     const totalPecas = carrinho.reduce((acc, item) => acc + item.qtd, 0);
     const subtotal = carrinho.reduce((acc, item) => acc + (item.preco * item.qtd), 0);
-    const desconto = cupaoAplicado ? totalPecas * 50 : 0;
+    const desconto = calcularDesconto(subtotal, totalPecas);
     const total = subtotal - desconto;
 
     // Mostrar/ocultar desconto
-    if (cupaoAplicado) {
+    if (cupaoAplicado && desconto > 0) {
       descontoRow.style.display = 'flex';
       descontoVal.textContent = `-${desconto} MT`;
     } else {
@@ -998,13 +1026,13 @@
 
     const totalPecas = carrinho.reduce((acc, item) => acc + item.qtd, 0);
     const subtotal = carrinho.reduce((acc, item) => acc + (item.preco * item.qtd), 0);
-    const desconto = cupaoAplicado ? totalPecas * 50 : 0;
+    const desconto = calcularDesconto(subtotal, totalPecas);
     const total = subtotal - desconto;
 
     msg += `─────────────────────\n`;
     msg += `💳 *Subtotal:* ${subtotal} MT\n`;
-    if (cupaoAplicado) {
-      msg += `🎟 *Cupão (A ROYALTY É NOSSA):* -${desconto} MT\n`;
+    if (cupaoAplicado && cupaoInfo && desconto > 0) {
+      msg += `🎟 *Cupão (${cupaoInfo.nome}):* -${desconto} MT\n`;
       msg += `✅ *Total Final:* ${total} MT\n`;
     } else {
       msg += `✅ *Total:* ${total} MT\n`;
@@ -1014,7 +1042,6 @@
       msg += `\n📝 *Preferências de Entrega:* "${notas}"\n`;
     }
 
-    // Pixel: Purchase — valor final com desconto
     fbq('track', 'Purchase', {
       content_ids: carrinho.map(item => String(item.id)),
       content_type: 'product',
@@ -1025,12 +1052,21 @@
 
     window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
 
-    // Supabase: guardar pedido
+    // Supabase: guardar pedido e incrementar uso do cupão
     sbGuardarPedido(
       { nome: nomeCliente, telefone: celularCliente, localizacao: localizacaoCliente, notas: notas },
       carrinho.map(function(i) { return { id: i.id, nome: i.nome, cor: i.cor, tamanho: i.tamanho, qtd: i.qtd, preco: i.preco }; }),
-      subtotal, desconto, total, cupaoAplicado ? 'RM07' : null
+      subtotal, desconto, total, cupaoAplicado && cupaoInfo ? cupaoInfo.codigo : null
     );
+
+    // Incrementar uso do cupão
+    if (cupaoAplicado && cupaoInfo) {
+      fetch(`${SB_URL}/rest/v1/cupoes?id=eq.${cupaoInfo.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ total_usos: (cupaoInfo.total_usos || 0) + 1 })
+      }).catch(function(){});
+    }
   }
 
   function showPage(page, el) {
