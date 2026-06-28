@@ -320,7 +320,17 @@
     .cart-desconto-lbl { font-size: 0.82rem; font-weight: 600; color: #2e7d32; }
     .cart-desconto-val { font-size: 0.95rem; font-weight: 700; color: #2e7d32; }
 
-    /* TOAST */
+    /* ─── BANNERS ─── */
+    .banners-sec { width:100%; background:var(--g1); overflow:hidden; }
+    .banner-carousel { position:relative; width:100%; overflow:hidden; }
+    .banner-track { display:flex; transition:transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94); will-change:transform; }
+    .banner-slide { min-width:100%; position:relative; cursor:pointer; }
+    .banner-slide img { width:100%; aspect-ratio:1296/544; object-fit:cover; display:block; }
+    .banner-dots { position:absolute; bottom:12px; left:0; right:0; display:flex; justify-content:center; gap:7px; z-index:5; }
+    .b-dot { width:8px; height:8px; background:rgba(255,255,255,0.4); border-radius:50%; transition:all 0.25s; cursor:pointer; }
+    .b-dot.active { background:#fff; transform:scale(1.2); }
+
+    /* ─── TOAST */
     .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: var(--g1); color: #fff; padding: 12px 28px; border-radius: 3px; font-size: 0.82rem; font-weight: 600; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; white-space: nowrap; letter-spacing: 0.04em; }
     .toast.show { opacity: 1; }
 
@@ -446,6 +456,17 @@
       Ver Coleção →
     </a>
   </section>
+
+  <!-- ════════════════════════════════════
+       [BANNERS] — Carrossel de banners
+       Gerido pelo Admin → tab Banners
+  ════════════════════════════════════ -->
+  <div class="banners-sec" id="banners-sec" style="display:none;">
+    <div class="banner-carousel" id="banner-carousel">
+      <div class="banner-track" id="banner-track"></div>
+      <div class="banner-dots" id="banner-dots"></div>
+    </div>
+  </div>
 
   <!-- PRODUTOS -->
   <section class="produtos-sec" id="produtos">
@@ -654,6 +675,79 @@
       renderProdutos();
     })
     .catch(function() { renderProdutos(); });
+  }
+
+  // ════════════════════════════════════════
+  // [BANNERS] — Carrossel com autoplay
+  // ════════════════════════════════════════
+  let bannerIdx = 0;
+  let bannerTotal = 0;
+  let bannerTimer = null;
+  let bannerDados = [];
+
+  function carregarBanners() {
+    fetch(`${SB_URL}/rest/v1/banners?activo=eq.true&order=ordem.asc&select=*`, {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (!data || data.length === 0) return;
+      bannerDados = data;
+      bannerTotal = data.length;
+      const track = document.getElementById('banner-track');
+      const dots = document.getElementById('banner-dots');
+      track.innerHTML = data.map(function(b) {
+        return `<div class="banner-slide" onclick="${b.link_destino ? `window.open('${b.link_destino}','_blank')` : ''}">
+          <img src="${b.imagem_url}" alt="Banner Royalty" loading="lazy"/>
+        </div>`;
+      }).join('');
+      dots.innerHTML = data.map(function(_, i) {
+        return `<div class="b-dot ${i===0?'active':''}" onclick="irBanner(${i})"></div>`;
+      }).join('');
+      document.getElementById('banners-sec').style.display = 'block';
+      iniciarBannerTouch();
+      iniciarBannerAutoplay();
+    })
+    .catch(function() {});
+  }
+
+  function irBanner(idx) {
+    bannerIdx = idx;
+    document.getElementById('banner-track').style.transform = `translateX(-${idx * 100}%)`;
+    document.querySelectorAll('.b-dot').forEach(function(d, i) {
+      d.classList.toggle('active', i === idx);
+    });
+  }
+
+  function proximoBanner() {
+    bannerIdx = (bannerIdx + 1) % bannerTotal;
+    irBanner(bannerIdx);
+  }
+
+  function iniciarBannerAutoplay() {
+    if (bannerTimer) clearInterval(bannerTimer);
+    bannerTimer = setInterval(proximoBanner, 8000);
+  }
+
+  function iniciarBannerTouch() {
+    const track = document.getElementById('banner-track');
+    let startX = 0, isDragging = false;
+    track.addEventListener('touchstart', function(e) {
+      startX = e.touches[0].clientX;
+      isDragging = true;
+      clearInterval(bannerTimer);
+    }, { passive: true });
+    track.addEventListener('touchend', function(e) {
+      if (!isDragging) return;
+      const diff = startX - e.changedTouches[0].clientX;
+      if (Math.abs(diff) > 40) {
+        if (diff > 0) bannerIdx = (bannerIdx + 1) % bannerTotal;
+        else bannerIdx = (bannerIdx - 1 + bannerTotal) % bannerTotal;
+        irBanner(bannerIdx);
+      }
+      isDragging = false;
+      iniciarBannerAutoplay();
+    }, { passive: true });
   }
 
   // Carregar produtos do Supabase ao iniciar
@@ -1086,6 +1180,7 @@
 
   // Produtos e estados são inicializados após carregar do Supabase acima
   atualizarCarrinhoVisual();
+  carregarBanners();
 </script>
 </body>
 </html>
