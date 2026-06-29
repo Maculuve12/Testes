@@ -250,8 +250,13 @@
     .tam-btn:hover { border-color: var(--g3); color: var(--g3); }
     .tam-btn.selected { background: var(--g1); color: #fff; border-color: var(--g1); }
     
-    .btn-comprar { margin-top: auto; width: 100%; padding: 13px; background: var(--g2); color: #fff; border: none; border-radius: 2px; cursor: pointer; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.1em; font-family: 'Montserrat', sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s; }
+    .card-acoes { display: flex; gap: 8px; margin-top: auto; }
+    .btn-comprar { flex: 1; padding: 13px; background: var(--g2); color: #fff; border: none; border-radius: 2px; cursor: pointer; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.1em; font-family: 'Montserrat', sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s; }
     .btn-comprar:hover { background: var(--g1); }
+    .btn-partilhar { width: 46px; height: 46px; background: transparent; border: 1.5px solid var(--accent); border-radius: 2px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
+    .btn-partilhar:hover { background: var(--g1); border-color: var(--g1); }
+    .btn-partilhar:hover svg { fill: #fff; }
+    .btn-partilhar svg { width: 18px; height: 18px; fill: var(--g2); transition: fill 0.2s; }
 
     /* ─── SMART CART (GAVETA LATERAL) ─── */
     .cart-overlay {
@@ -707,8 +712,8 @@
   // ════════════════════════════════════════
   // [SUPABASE] — Banco de dados
   // ════════════════════════════════════════
-  const SB_URL = 'https://lmqtqyepukrhkpnfzzdk.supabase.co';
-  const SB_KEY = 'sb_publishable_UFWsA_feUgWAvXPMvV59rA_Nf7MonuA';
+  const SB_URL = 'https://zrcnwkrvfkykqnhwoklh.supabase.co';
+  const SB_KEY = 'sb_publishable_PX2HcOTmRmbHLDOT5YuKjg_KBNB6aZc';
 
   let produtos = [];
   let maisCampradoId = null;
@@ -851,6 +856,7 @@
     iniciarEstados();
     carregarMaisVendido();
     atualizarCarrinhoVisual();
+    verificarLinkProduto();
   })
   .catch(function() { console.error('Erro ao carregar produtos'); });
 
@@ -860,7 +866,7 @@
       const temImagens = p.imgs && p.imgs.length > 0;
       
       return `
-      <div class="card">
+      <div class="card" data-produto-id="${p.id}">
         <div class="prod-galeria" id="galeria-${p.id}">
           ${(p.badge || p.precoOriginal || maisCampradoId === p.id) ? `
             <div class="prod-badge ${maisCampradoId === p.id ? 'badge-mais-vendido' : p.badge === 'Novo' ? 'badge-novo' : 'badge-promo'}">
@@ -906,9 +912,14 @@
               `).join('')}
             </div>
           </div>
-          <button class="btn-comprar" onclick="adicionarAoCarrinho(${p.id})">
-            Adicionar ao Carrinho
-          </button>
+          <div class="card-acoes">
+            <button class="btn-comprar" onclick="adicionarAoCarrinho(${p.id})">
+              Adicionar ao Carrinho
+            </button>
+            <button class="btn-partilhar" onclick="partilharProduto(${p.id},'${p.nome.replace(/'/g, "\\'")}')" title="Partilhar produto">
+              <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+            </button>
+          </div>
         </div>
       </div>
     `}).join('');
@@ -1248,8 +1259,42 @@
   }
 
   // ════════════════════════════════════════
-  // [DRAWER MENU]
+  // [LINKS INDIVIDUAIS DE PRODUTO]
   // ════════════════════════════════════════
+  function partilharProduto(id, nome) {
+    const url = `${window.location.origin}${window.location.pathname}?produto=${id}`;
+    if (navigator.share) {
+      navigator.share({
+        title: `Royalty — ${nome}`,
+        text: `Confere este produto da Royalty: ${nome}`,
+        url: url
+      }).catch(function(){});
+    } else {
+      navigator.clipboard.writeText(url).then(function() {
+        showToast('Link copiado! Partilha com quem quiseres 😊');
+      }).catch(function() {
+        showToast('Link: ' + url);
+      });
+    }
+  }
+
+  function verificarLinkProduto() {
+    const params = new URLSearchParams(window.location.search);
+    const produtoId = params.get('produto');
+    if (!produtoId) return;
+    // Aguardar produtos carregarem e fazer scroll
+    const tentarScroll = function() {
+      const card = document.querySelector(`[data-produto-id="${produtoId}"]`);
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        card.style.boxShadow = '0 0 0 3px var(--gold)';
+        setTimeout(() => card.style.boxShadow = '', 3000);
+      } else {
+        setTimeout(tentarScroll, 300);
+      }
+    };
+    setTimeout(tentarScroll, 800);
+  }
   function abrirDrawer() {
     document.getElementById('drawer-overlay').classList.add('open');
     document.body.style.overflow = 'hidden';
