@@ -162,6 +162,7 @@
     <div class="tab" onclick="mudarTab('banners',this)">🖼️ Banners</div>
     <div class="tab" onclick="mudarTab('cupoes',this)">🎟️ Cupões</div>
     <div class="tab" onclick="mudarTab('clientes',this)">👥 Clientes</div>
+    <div class="tab" onclick="mudarTab('caixa',this)">💰 Caixa</div>
     <div class="tab" onclick="mudarTab('relatorios',this)">📈 Relatórios</div>
   </div>
 
@@ -286,6 +287,56 @@
       <div class="clientes-lista" id="clientes-lista"><div class="loading">A carregar...</div></div>
     </div>
 
+    <!-- CAIXA -->
+    <div class="tab-content" id="tab-caixa">
+      <!-- Resumo do Caixa -->
+      <div class="resumo-grid" style="margin-bottom:20px;">
+        <div class="resumo-card"><div class="resumo-label">Total Vendas</div><div class="resumo-valor verde" id="cx-vendas">—</div></div>
+        <div class="resumo-card"><div class="resumo-label">Entradas Manuais</div><div class="resumo-valor dourado" id="cx-entradas">—</div></div>
+        <div class="resumo-card"><div class="resumo-label">Total Saídas</div><div class="resumo-valor vermelho" id="cx-saidas">—</div></div>
+        <div class="resumo-card"><div class="resumo-label">Saldo Disponível</div><div class="resumo-valor" id="cx-saldo" style="color:#142D29;">—</div></div>
+      </div>
+
+      <!-- Registar movimento -->
+      <div class="form-card" id="form-caixa" style="display:none;">
+        <div class="form-titulo" id="form-cx-titulo">➕ Registar Movimento</div>
+        <div class="form-grid">
+          <div class="form-grupo">
+            <label class="form-label">Tipo *</label>
+            <select class="form-input" id="cx-tipo" onchange="atualizarOrigens()">
+              <option value="entrada">Entrada</option>
+              <option value="saida">Saída</option>
+            </select>
+          </div>
+          <div class="form-grupo">
+            <label class="form-label">Categoria *</label>
+            <select class="form-input" id="cx-origem">
+              <option value="manual">Manual / Outro</option>
+            </select>
+          </div>
+          <div class="form-grupo full">
+            <label class="form-label">Descrição *</label>
+            <input class="form-input" id="cx-descricao" placeholder="Ex: Compra de 10 camisetas brancas">
+          </div>
+          <div class="form-grupo">
+            <label class="form-label">Valor (MT) *</label>
+            <input class="form-input" id="cx-valor" type="number" placeholder="Ex: 5000">
+          </div>
+        </div>
+        <div class="form-acoes">
+          <button class="btn-guardar" onclick="guardarMovimento()">Registar</button>
+          <button class="btn-cancelar" onclick="fecharFormCaixa()">Cancelar</button>
+        </div>
+        <div id="cx-msg"></div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div class="sec-titulo" style="margin:0;border:none;padding:0;">📋 Histórico de Movimentos</div>
+        <button class="btn-topo cinza" style="background:var(--gold);color:var(--g1);border:none;" onclick="abrirFormCaixa()">+ Registar</button>
+      </div>
+      <div class="wrap-tabela"><div id="caixa-historico"><div class="loading">A carregar...</div></div></div>
+    </div>
+
     <!-- RELATÓRIOS -->
     <div class="tab-content" id="tab-relatorios">
       <div class="sec-titulo">📅 Período</div>
@@ -322,8 +373,8 @@
 
 <script>
   const SENHA_ADMIN = 'royalty2024';
-  const SB_URL = 'https://lmqtqyepukrhkpnfzzdk.supabase.co';
-  const SB_KEY = 'sb_publishable_UFWsA_feUgWAvXPMvV59rA_Nf7MonuA';
+  const SB_URL = 'https://zrcnwkrvfkykqnhwoklh.supabase.co';
+  const SB_KEY = 'sb_publishable_PX2HcOTmRmbHLDOT5YuKjg_KBNB6aZc';
   let prodEditandoId=null, cupEditandoId=null, banEditandoId=null;
   let graficoVendas=null, graficoProdutos=null;
   let periodoIni=null, periodoFim=null;
@@ -346,6 +397,7 @@
     if(tab==='banners') carregarBanners();
     if(tab==='cupoes') carregarCupoes();
     if(tab==='clientes') carregarClientes();
+    if(tab==='caixa') carregarCaixa();
     if(tab==='relatorios') carregarRelatorios(7);
   }
 
@@ -640,6 +692,82 @@
     pedidos.forEach(p=>{const zona=(p.cliente_localizacao||'Desconhecida').split(',')[0].trim();zonas[zona]=(zonas[zona]||0)+(p.total||0);});
     const zonasOrd=Object.entries(zonas).sort((a,b)=>b[1]-a[1]);
     document.getElementById('zonas-lista').innerHTML=zonasOrd.length?zonasOrd.map(([z,v])=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--off);font-size:0.77rem;"><span style="color:var(--muted);font-weight:600;">📍 ${z}</span><span style="font-weight:800;color:var(--g2);">${v.toLocaleString('pt-PT')} MT</span></div>`).join(''):'<div class="vazio">Sem dados.</div>';
+  }
+
+  // ── Caixa ──
+  const origensEntrada = ['manual','adiantamento','evento','outro'];
+  const origensSaida = ['stock','producao','transporte','publicidade','impostos','outro'];
+
+  function atualizarOrigens() {
+    const tipo = document.getElementById('cx-tipo').value;
+    const sel = document.getElementById('cx-origem');
+    const opts = tipo === 'entrada' ? origensEntrada : origensSaida;
+    const labels = {
+      manual:'Manual / Outro', adiantamento:'Adiantamento de cliente',
+      evento:'Venda em evento', outro:'Outro',
+      stock:'Compra de stock', producao:'Produção / Costura',
+      transporte:'Transporte / Entrega', publicidade:'Publicidade / Anúncios',
+      impostos:'Impostos / Taxas'
+    };
+    sel.innerHTML = opts.map(o=>`<option value="${o}">${labels[o]}</option>`).join('');
+  }
+
+  function abrirFormCaixa() {
+    document.getElementById('cx-tipo').value = 'saida';
+    atualizarOrigens();
+    document.getElementById('cx-descricao').value = '';
+    document.getElementById('cx-valor').value = '';
+    document.getElementById('cx-msg').textContent = '';
+    document.getElementById('form-caixa').style.display = 'block';
+    document.getElementById('form-caixa').scrollIntoView({behavior:'smooth'});
+  }
+
+  function fecharFormCaixa() {
+    document.getElementById('form-caixa').style.display = 'none';
+  }
+
+  async function guardarMovimento() {
+    const tipo = document.getElementById('cx-tipo').value;
+    const origem = document.getElementById('cx-origem').value;
+    const descricao = document.getElementById('cx-descricao').value.trim();
+    const valor = parseInt(document.getElementById('cx-valor').value);
+    const msgEl = document.getElementById('cx-msg');
+    if (!descricao || !valor) { msgEl.className='msg-err'; msgEl.textContent='Descrição e valor são obrigatórios.'; return; }
+    msgEl.className=''; msgEl.textContent='A registar...';
+    const ok = await sbPost('caixa', { tipo, origem, descricao, valor });
+    if (ok) {
+      msgEl.className='msg-ok'; msgEl.textContent='✅ Registado!';
+      setTimeout(()=>{ fecharFormCaixa(); carregarCaixa(); }, 1000);
+    } else { msgEl.className='msg-err'; msgEl.textContent='Erro ao registar.'; }
+  }
+
+  async function carregarCaixa() {
+    const [movimentos, pedidos] = await Promise.all([
+      sbGet('caixa','order=criado_em.desc'),
+      sbGet('pedidos','select=total')
+    ]);
+    const totalVendas = pedidos.reduce((a,p)=>a+(p.total||0),0);
+    const entradasManuais = movimentos.filter(m=>m.tipo==='entrada').reduce((a,m)=>a+(m.valor||0),0);
+    const totalSaidas = movimentos.filter(m=>m.tipo==='saida').reduce((a,m)=>a+(m.valor||0),0);
+    const saldo = totalVendas + entradasManuais - totalSaidas;
+    document.getElementById('cx-vendas').textContent = totalVendas.toLocaleString('pt-PT') + ' MT';
+    document.getElementById('cx-entradas').textContent = entradasManuais.toLocaleString('pt-PT') + ' MT';
+    document.getElementById('cx-saidas').textContent = totalSaidas.toLocaleString('pt-PT') + ' MT';
+    const saldoEl = document.getElementById('cx-saldo');
+    saldoEl.textContent = saldo.toLocaleString('pt-PT') + ' MT';
+    saldoEl.style.color = saldo >= 0 ? '#2e7d32' : '#c0392b';
+    const c = document.getElementById('caixa-historico');
+    if (!movimentos.length) { c.innerHTML='<div class="vazio">Sem movimentos registados. Clica em "+ Registar" para começar.</div>'; return; }
+    const labelsOrigem = { manual:'Manual',adiantamento:'Adiantamento',evento:'Evento',stock:'Stock',producao:'Produção',transporte:'Transporte',publicidade:'Publicidade',impostos:'Impostos',outro:'Outro' };
+    c.innerHTML = `<table class="tabela">
+      <thead><tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Descrição</th><th>Valor</th></tr></thead>
+      <tbody>${movimentos.map(m=>`<tr>
+        <td>${fmtData(m.criado_em)}</td>
+        <td><span class="tag ${m.tipo==='entrada'?'activo':'inactivo'}">${m.tipo==='entrada'?'⬆ Entrada':'⬇ Saída'}</span></td>
+        <td>${labelsOrigem[m.origem]||m.origem}</td>
+        <td>${m.descricao||'—'}</td>
+        <td style="font-weight:800;color:${m.tipo==='entrada'?'#2e7d32':'#c0392b'};">${m.tipo==='entrada'?'+':'−'}${(m.valor||0).toLocaleString('pt-PT')} MT</td>
+      </tr>`).join('')}</tbody></table>`;
   }
 
   function fmtData(iso){if(!iso)return'—';const d=new Date(iso);return`${d.toLocaleDateString('pt-PT')}<br><span style="font-size:0.65rem;color:var(--muted)">${d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'})}</span>`;}
