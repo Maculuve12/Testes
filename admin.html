@@ -417,7 +417,12 @@
   }
 
   async function carregarRanking(){
-    const data=await sbGet('estatisticas_produtos','order=total_vendas.desc');
+    const [stats, produtosAtivos] = await Promise.all([
+      sbGet('estatisticas_produtos','order=total_vendas.desc'),
+      sbGet('produtos','select=id')
+    ]);
+    const idsValidos = produtosAtivos.map(p=>p.id);
+    const data = stats.filter(s => idsValidos.includes(s.produto_id));
     const c=document.getElementById('ranking-produtos');
     if(!data.length){c.innerHTML='<div class="vazio">Sem dados.</div>';return;}
     const mx=Math.max(...data.map(p=>p.total_vendas||0),1);
@@ -744,7 +749,7 @@
   async function carregarCaixa() {
     const [movimentos, pedidos] = await Promise.all([
       sbGet('caixa','order=criado_em.desc'),
-      sbGet('pedidos','select=total')
+      sbGet('pedidos','order=criado_em.desc&select=id,total,cliente_nome,criado_em')
     ]);
     const totalVendas = pedidos.reduce((a,p)=>a+(p.total||0),0);
     const entradasManuais = movimentos.filter(m=>m.tipo==='entrada').reduce((a,m)=>a+(m.valor||0),0);
@@ -756,17 +761,41 @@
     const saldoEl = document.getElementById('cx-saldo');
     saldoEl.textContent = saldo.toLocaleString('pt-PT') + ' MT';
     saldoEl.style.color = saldo >= 0 ? '#2e7d32' : '#c0392b';
-    const c = document.getElementById('caixa-historico');
-    if (!movimentos.length) { c.innerHTML='<div class="vazio">Sem movimentos registados. Clica em "+ Registar" para começar.</div>'; return; }
+
+    // Mesclar pedidos (vendas) com movimentos manuais numa única lista cronológica
     const labelsOrigem = { manual:'Manual',adiantamento:'Adiantamento',evento:'Evento',stock:'Stock',producao:'Produção',transporte:'Transporte',publicidade:'Publicidade',impostos:'Impostos',outro:'Outro' };
+
+    const linhasVendas = pedidos.map(p => ({
+      data: p.criado_em,
+      tipo: 'entrada',
+      categoria: 'Venda',
+      descricao: `Pedido de ${p.cliente_nome || 'Cliente'}`,
+      valor: p.total || 0,
+      isVenda: true
+    }));
+
+    const linhasManuais = movimentos.map(m => ({
+      data: m.criado_em,
+      tipo: m.tipo,
+      categoria: labelsOrigem[m.origem] || m.origem,
+      descricao: m.descricao || '—',
+      valor: m.valor || 0,
+      isVenda: false
+    }));
+
+    const todasLinhas = [...linhasVendas, ...linhasManuais].sort((a,b) => new Date(b.data) - new Date(a.data));
+
+    const c = document.getElementById('caixa-historico');
+    if (!todasLinhas.length) { c.innerHTML='<div class="vazio">Sem movimentos registados ainda.</div>'; return; }
+
     c.innerHTML = `<table class="tabela">
       <thead><tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Descrição</th><th>Valor</th></tr></thead>
-      <tbody>${movimentos.map(m=>`<tr>
-        <td>${fmtData(m.criado_em)}</td>
+      <tbody>${todasLinhas.map(m=>`<tr>
+        <td>${fmtData(m.data)}</td>
         <td><span class="tag ${m.tipo==='entrada'?'activo':'inactivo'}">${m.tipo==='entrada'?'⬆ Entrada':'⬇ Saída'}</span></td>
-        <td>${labelsOrigem[m.origem]||m.origem}</td>
-        <td>${m.descricao||'—'}</td>
-        <td style="font-weight:800;color:${m.tipo==='entrada'?'#2e7d32':'#c0392b'};">${m.tipo==='entrada'?'+':'−'}${(m.valor||0).toLocaleString('pt-PT')} MT</td>
+        <td>${m.categoria}${m.isVenda ? ' 🛍️' : ''}</td>
+        <td>${m.descricao}</td>
+        <td style="font-weight:800;color:${m.tipo==='entrada'?'#2e7d32':'#c0392b'};">${m.tipo==='entrada'?'+':'−'}${m.valor.toLocaleString('pt-PT')} MT</td>
       </tr>`).join('')}</tbody></table>`;
   }
 
